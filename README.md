@@ -437,15 +437,48 @@ cat chat_analysis/logs/run.log
 - 감정 변화 시계열 분석
 - 키워드 알림 시스템
 
+## 👨‍💻 개발자
+
+### 🎓 주 개발자
+
+- **xistoh162108** (KAIST)
+  - 📧 이메일: xistoh162108@kaist.ac.kr
+  - 🏫 소속: 한국과학기술원 (KAIST)
+  - 🔗 GitHub: [@xistoh162108](https://github.com/xistoh162108)
+
+### 🤖 AI 협력 개발
+
+- **Claude AI** (Anthropic)
+  - 코드 아키텍처 설계 및 구현
+  - 알고리즘 최적화 및 한국어 특화 기능
+  - 문서화 및 사용자 경험 개선
+
+이 프로젝트는 **인간-AI 협업**의 결과물로, 학술 연구와 실용적 도구 개발의 만남을 보여줍니다.
+
 ## 🤝 기여하기
 
-이 프로젝트는 Claude Code와 함께 개발되었습니다. 
+### 🔗 협업 방식
 
-### 개선 아이디어
+- **이슈 리포팅**: [GitHub Issues](https://github.com/xistoh162108/kakaotalk_analyzer/issues)
+- **기능 제안**: Pull Request 환영
+- **학술 협력**: 연구 목적 사용 시 인용 부탁드립니다
+
+### 💡 개선 아이디어
+
 - 새로운 분석 지표 추가
 - 다른 메신저 지원 (라인, 텔레그램 등)
 - 웹 인터페이스 개발
 - 실시간 분석 기능
+
+### 📝 인용 (Citation)
+
+학술 논문이나 연구에서 사용하실 때:
+
+```bibtex
+xistoh162108, & Claude AI. (2025). Kakao Talk Analyzer: 
+Comprehensive analysis tool for KakaoTalk chat exports (v1.0.1). 
+https://github.com/xistoh162108/kakaotalk_analyzer
+```
 
 ## 📄 라이선스
 
