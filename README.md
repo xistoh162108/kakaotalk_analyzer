@@ -179,7 +179,7 @@ AI 모델 옵션:
 kakao-analyzer --input chat.csv
 
 # 🤖 AI 기능 전체 활용
-kakao-analyzer --input chat.csv --use-splade --use-ollama --model-name oss:20b
+kakao-analyzer --input chat.csv --use-splade --use-ollama --model-name "oss:20b"
 
 # 📊 특정 디렉토리에 결과 저장
 kakao-analyzer --input chat.csv --outdir my_results

@@ -20,7 +20,7 @@ def create_parser() -> argparse.ArgumentParser:
         epilog="""
 Examples:
   kakao-analyzer --input test.csv
-  kakao-analyzer --input test.csv --use-ollama --model-name oss:20b
+  kakao-analyzer --input test.csv --use-ollama --model-name "oss:20b"
   kakao-analyzer --input test.csv --use-splade --embed-model bge-m3
         """
     )
