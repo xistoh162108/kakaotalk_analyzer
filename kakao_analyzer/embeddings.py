@@ -75,16 +75,42 @@ class MockEmbeddingBackend(EmbeddingBackend):
 class SentenceTransformerBackend(EmbeddingBackend):
     """SentenceTransformers-based embedding backend"""
     
-    def __init__(self, model_name: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"):
+    def __init__(self, model_name: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2", device: str = None):
         self.model_name = model_name
+        self.device = device
         self._model = None
         
     def _load_model(self):
-        """Lazy load model"""
+        """Lazy load model with automatic device detection"""
         if self._model is None:
             try:
                 from sentence_transformers import SentenceTransformer
-                self._model = SentenceTransformer(self.model_name)
+                
+                # Auto-detect device if not specified
+                if self.device is None:
+                    try:
+                        import torch
+                        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+                    except ImportError:
+                        self.device = 'cpu'
+                
+                # Load model with device specification
+                self._model = SentenceTransformer(self.model_name, device=self.device)
+                
+                # Log model loading info
+                logger = logging.getLogger(__name__)
+                logger.info(f"🤖 Embedding 모델 로드:")
+                logger.info(f"   📦 모델: {self.model_name}")
+                logger.info(f"   🔧 디바이스: {self.device}")
+                
+                if self.device == 'cuda':
+                    try:
+                        import torch
+                        memory_allocated = torch.cuda.memory_allocated() / (1024**3)
+                        logger.info(f"   💾 GPU 메모리 사용: {memory_allocated:.2f}GB")
+                    except:
+                        pass
+                        
             except ImportError:
                 raise ImportError("sentence-transformers library not installed. Using mock backend.")
             except Exception as e:
@@ -94,12 +120,19 @@ class SentenceTransformerBackend(EmbeddingBackend):
         """Encode texts using SentenceTransformers"""
         self._load_model()
         
-        # Process in batches
+        # Process in batches with progress logging
         embeddings = []
-        for i in range(0, len(texts), batch_size):
+        total_batches = (len(texts) + batch_size - 1) // batch_size
+        
+        for batch_idx, i in enumerate(range(0, len(texts), batch_size), 1):
             batch_texts = texts[i:i + batch_size]
             batch_embeddings = self._model.encode(batch_texts, convert_to_numpy=True)
             embeddings.append(batch_embeddings)
+            
+            # Log progress every 10 batches or at the end
+            if batch_idx % 10 == 0 or batch_idx == total_batches:
+                progress = (batch_idx / total_batches) * 100
+                logging.getLogger(__name__).info(f"   📈 Progress: {progress:.1f}% ({batch_idx}/{total_batches} batches)")
         
         return np.vstack(embeddings) if embeddings else np.array([])
     
@@ -122,11 +155,17 @@ class OllamaEmbeddingBackend(EmbeddingBackend):
     def encode(self, texts: List[str], batch_size: int = 32) -> np.ndarray:
         """Encode texts using Ollama embeddings API"""
         embeddings = []
+        total_batches = (len(texts) + batch_size - 1) // batch_size
         
-        for i in range(0, len(texts), batch_size):
+        for batch_idx, i in enumerate(range(0, len(texts), batch_size), 1):
             batch_texts = texts[i:i + batch_size]
             batch_embeddings = self._encode_batch(batch_texts)
             embeddings.extend(batch_embeddings)
+            
+            # Log progress every 5 batches or at the end (Ollama is slower)
+            if batch_idx % 5 == 0 or batch_idx == total_batches:
+                progress = (batch_idx / total_batches) * 100
+                logging.getLogger(__name__).info(f"   📈 Progress: {progress:.1f}% ({batch_idx}/{total_batches} batches)")
         
         return np.array(embeddings)
     
@@ -177,7 +216,22 @@ class EmbeddingManager:
     def __init__(self, config, logger: logging.Logger = None):
         self.config = config
         self.logger = logger or logging.getLogger(__name__)
+        
+        # Setup GPU and device configuration
+        self.device_info = self._setup_device()
+        
+        # Update config with optimal batch size if not specified
+        if hasattr(self.config, 'batch_size') and self.config.batch_size == 32:  # Default value
+            optimal_batch_size = self.device_info.get('recommended_batch_size', 32)
+            self.config.batch_size = optimal_batch_size
+            self.logger.info(f"🎯 최적화된 배치 크기 설정: {optimal_batch_size}")
+        
         self.backend = self._create_backend()
+    
+    def _setup_device(self) -> Dict[str, Any]:
+        """Setup device configuration with GPU optimization"""
+        from .utils import setup_device
+        return setup_device(self.logger)
     
     def _create_backend(self) -> EmbeddingBackend:
         """Create appropriate embedding backend"""
@@ -194,32 +248,86 @@ class EmbeddingManager:
         
         # Try to load specified model with sentence transformers
         try:
+            # Get device from device_info
+            device = self.device_info.get('device', 'cpu')
+            
             if self.config.embed_model == "bge-m3":
                 model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
                 self.logger.info(f"Loading embedding model: {model_name} (bge-m3 not available, using fallback)")
-                return SentenceTransformerBackend(model_name)
+                return SentenceTransformerBackend(model_name, device=device)
             elif self.config.embed_model in ["sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"]:
                 self.logger.info(f"Loading embedding model: {self.config.embed_model}")
-                return SentenceTransformerBackend(self.config.embed_model)
+                return SentenceTransformerBackend(self.config.embed_model, device=device)
             else:
                 self.logger.info(f"Loading embedding model: {self.config.embed_model}")
-                return SentenceTransformerBackend(self.config.embed_model)
+                return SentenceTransformerBackend(self.config.embed_model, device=device)
                 
         except (ImportError, RuntimeError) as e:
             self.logger.warning(f"Failed to load embedding model: {e}")
             self.logger.info("Using mock embedding backend")
             return MockEmbeddingBackend()
     
+    def _estimate_processing_time(self, total_texts: int, backend_type: str) -> str:
+        """Estimate processing time based on text count and backend type"""
+        
+        # Rough estimates based on typical performance (texts per second)
+        performance_estimates = {
+            'mock': 5000,  # Very fast
+            'sentence_transformer': 100,  # Moderate
+            'ollama_embedding': 20,  # Slower due to API calls
+            'unknown': 50  # Conservative estimate
+        }
+        
+        texts_per_second = performance_estimates.get(backend_type, 50)
+        estimated_seconds = total_texts / texts_per_second
+        
+        if estimated_seconds < 60:
+            return f"{estimated_seconds:.1f} seconds"
+        elif estimated_seconds < 3600:
+            return f"{estimated_seconds/60:.1f} minutes"
+        else:
+            return f"{estimated_seconds/3600:.1f} hours"
+    
+    def _format_duration(self, seconds: float) -> str:
+        """Format duration in human-readable format"""
+        if seconds < 60:
+            return f"{seconds:.1f} seconds"
+        elif seconds < 3600:
+            return f"{seconds/60:.1f} minutes"
+        else:
+            return f"{seconds/3600:.1f} hours"
+    
     def create_embeddings(self, df: pd.DataFrame, window_size: int = None) -> Dict[str, Any]:
         """Create embeddings for messages and sliding windows"""
         
         window_size = window_size or self.config.topic_window_size
-        self.logger.info(f"Creating embeddings (window_size: {window_size})")
         
         if df.empty:
             return {'message_embeddings': np.array([]), 'window_embeddings': np.array([])}
         
+        # Calculate estimated processing time
+        num_messages = len(df)
+        num_windows = max(0, num_messages - window_size + 1)
+        total_texts = num_messages + num_windows
+        
+        # Estimate processing time based on backend type and text count
+        backend_type = self.backend.get_model_info().get('type', 'unknown')
+        estimated_time = self._estimate_processing_time(total_texts, backend_type)
+        
+        self.logger.info(f"🚀 Starting embedding generation:")
+        self.logger.info(f"   📊 Messages to process: {num_messages:,}")
+        self.logger.info(f"   🪟 Windows to create: {num_windows:,}")
+        self.logger.info(f"   📝 Total texts to embed: {total_texts:,}")
+        self.logger.info(f"   ⏱️  Estimated time: {estimated_time}")
+        self.logger.info(f"   🤖 Backend: {backend_type}")
+        self.logger.info(f"   📦 Batch size: {self.config.batch_size}")
+        self.logger.info(f"   🪟 Window size: {window_size}")
+        
+        import time
+        start_time = time.time()
+        
         # Message-level embeddings
+        self.logger.info("🔤 Processing message embeddings...")
         messages = df['message'].tolist()
         message_embeddings = self.backend.encode(messages, batch_size=self.config.batch_size)
         
@@ -241,9 +349,25 @@ class EmbeddingManager:
                 'participants': df.iloc[i:i+window_size]['user'].unique().tolist()
             })
         
-        window_embeddings = self.backend.encode(windows, batch_size=self.config.batch_size) if windows else np.array([])
+        # Window-level embeddings
+        if windows:
+            self.logger.info("🪟 Processing window embeddings...")
+            window_embeddings = self.backend.encode(windows, batch_size=self.config.batch_size)
+        else:
+            window_embeddings = np.array([])
+        
+        # Calculate actual processing time
+        end_time = time.time()
+        actual_duration = end_time - start_time
         
         model_info = self.backend.get_model_info()
+        
+        # Log completion summary
+        self.logger.info(f"✅ Embedding generation completed!")
+        self.logger.info(f"   ⏰ Actual time: {self._format_duration(actual_duration)}")
+        self.logger.info(f"   🎯 Processing rate: {total_texts/actual_duration:.1f} texts/second")
+        self.logger.info(f"   📊 Generated {len(message_embeddings):,} message embeddings")
+        self.logger.info(f"   🪟 Generated {len(window_embeddings):,} window embeddings")
         
         return {
             'message_embeddings': message_embeddings,

@@ -222,3 +222,157 @@ def get_time_bins(start_time: datetime, end_time: datetime, bin_size_minutes: in
         current = next_bin
     
     return bins
+
+
+def get_gpu_info() -> Dict[str, Any]:
+    """Get GPU information and availability"""
+    gpu_info = {
+        'available': False,
+        'device_count': 0,
+        'device_name': None,
+        'memory_total': 0,
+        'memory_free': 0,
+        'memory_used': 0,
+        'cuda_version': None,
+        'device': 'cpu'
+    }
+    
+    try:
+        import torch
+        
+        if torch.cuda.is_available():
+            gpu_info['available'] = True
+            gpu_info['device_count'] = torch.cuda.device_count()
+            gpu_info['cuda_version'] = torch.version.cuda
+            
+            # Get info for first GPU
+            current_device = torch.cuda.current_device()
+            gpu_info['device_name'] = torch.cuda.get_device_name(current_device)
+            
+            # Memory info
+            memory_stats = torch.cuda.memory_stats(current_device)
+            gpu_info['memory_total'] = torch.cuda.get_device_properties(current_device).total_memory
+            gpu_info['memory_free'] = gpu_info['memory_total'] - torch.cuda.memory_allocated(current_device)
+            gpu_info['memory_used'] = torch.cuda.memory_allocated(current_device)
+            
+            gpu_info['device'] = 'cuda'
+            
+    except ImportError:
+        pass  # PyTorch not available
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"Error getting GPU info: {e}")
+    
+    return gpu_info
+
+
+def setup_gpu_memory_management(target_memory_fraction: float = 0.75) -> Dict[str, Any]:
+    """Setup GPU memory management with target fraction usage"""
+    result = {
+        'success': False,
+        'device': 'cpu',
+        'memory_limit_set': False,
+        'target_memory_mb': 0,
+        'message': 'CPU only'
+    }
+    
+    try:
+        import torch
+        
+        if not torch.cuda.is_available():
+            return result
+        
+        gpu_info = get_gpu_info()
+        if not gpu_info['available']:
+            return result
+        
+        # Calculate target memory
+        total_memory = gpu_info['memory_total']
+        target_memory = int(total_memory * target_memory_fraction)
+        target_memory_mb = target_memory // (1024 * 1024)
+        
+        # Set memory fraction
+        torch.cuda.set_per_process_memory_fraction(target_memory_fraction)
+        
+        # Clear cache to start fresh
+        torch.cuda.empty_cache()
+        
+        result.update({
+            'success': True,
+            'device': 'cuda',
+            'memory_limit_set': True,
+            'target_memory_mb': target_memory_mb,
+            'message': f'GPU memory limit set to {target_memory_mb}MB ({target_memory_fraction*100:.0f}%)'
+        })
+        
+        # Log the setup
+        logger = logging.getLogger(__name__)
+        logger.info(f"🚀 GPU 메모리 관리 설정:")
+        logger.info(f"   🎯 GPU: {gpu_info['device_name']}")
+        logger.info(f"   💾 전체 메모리: {total_memory // (1024*1024):,}MB")
+        logger.info(f"   🎚️  사용 제한: {target_memory_mb:,}MB ({target_memory_fraction*100:.0f}%)")
+        logger.info(f"   ✅ CUDA 버전: {gpu_info['cuda_version']}")
+        
+    except ImportError:
+        result['message'] = 'PyTorch not available'
+    except Exception as e:
+        result['message'] = f'Error setting up GPU memory: {e}'
+        logging.getLogger(__name__).warning(result['message'])
+    
+    return result
+
+
+def get_optimal_batch_size(device: str, base_batch_size: int = 32) -> int:
+    """Get optimal batch size based on device capabilities"""
+    if device == 'cpu':
+        return base_batch_size
+    
+    try:
+        import torch
+        
+        if not torch.cuda.is_available():
+            return base_batch_size
+        
+        # Get GPU memory info
+        gpu_info = get_gpu_info()
+        memory_gb = gpu_info['memory_total'] / (1024**3)
+        
+        # Scale batch size based on GPU memory
+        if memory_gb >= 12:  # High-end GPU
+            return min(base_batch_size * 4, 128)
+        elif memory_gb >= 8:  # Mid-range GPU
+            return min(base_batch_size * 2, 64)
+        elif memory_gb >= 4:  # Entry-level GPU
+            return min(base_batch_size * 1.5, 48)
+        else:  # Low memory GPU
+            return base_batch_size
+            
+    except Exception:
+        return base_batch_size
+
+
+def setup_device(logger: logging.Logger = None) -> Dict[str, Any]:
+    """Setup optimal device configuration"""
+    if logger is None:
+        logger = logging.getLogger(__name__)
+    
+    # Get GPU info
+    gpu_info = get_gpu_info()
+    
+    if gpu_info['available']:
+        # Setup GPU memory management
+        memory_setup = setup_gpu_memory_management(target_memory_fraction=0.75)
+        
+        return {
+            'device': 'cuda',
+            'gpu_info': gpu_info,
+            'memory_setup': memory_setup,
+            'recommended_batch_size': get_optimal_batch_size('cuda')
+        }
+    else:
+        logger.info("🖥️  GPU를 사용할 수 없습니다. CPU 모드로 실행합니다.")
+        return {
+            'device': 'cpu',
+            'gpu_info': gpu_info,
+            'memory_setup': {'success': False, 'message': 'No GPU available'},
+            'recommended_batch_size': get_optimal_batch_size('cpu')
+        }

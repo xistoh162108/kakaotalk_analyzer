@@ -43,7 +43,10 @@ class KakaoAnalysisPipeline:
         self.embedding_manager = EmbeddingManager(config, self.logger)
         self.topic_analyzer = TopicAnalyzer(config, self.logger)
         self.fun_metrics = FunMetricsCalculator(config, self.logger)
-        self.hybrid_retriever = HybridRetriever(config, self.logger)
+        
+        # Pass device info to HybridRetriever
+        device_info = getattr(self.embedding_manager, 'device_info', {'device': 'cpu'})
+        self.hybrid_retriever = HybridRetriever(config, self.logger, device_info)
         self.visualizer = KakaoVisualizer(config, self.logger)
         self.report_generator = ReportGenerator(config, self.logger)
         

@@ -270,14 +270,28 @@ python test_runner.py --generate-data
 
 ## 🔧 고급 설정
 
+### 🚀 GPU 가속 지원 (NEW!)
+- **자동 GPU 인식**: CUDA가 설치된 시스템에서 자동으로 GPU 사용
+- **메모리 최적화**: GPU 메모리의 75%까지 자동 제한하여 안정성 보장
+- **모델 자동 이관**: 임베딩 및 SPLADE 모델을 GPU로 자동 로드
+- **배치 크기 최적화**: GPU 메모리에 따라 배치 크기 자동 조정
+
+#### GPU 메모리별 최적화
+- **12GB+ (RTX 3080Ti/4080 이상)**: 배치 크기 128, Half precision
+- **8-12GB (RTX 3070/4070)**: 배치 크기 64, Half precision  
+- **4-8GB (GTX 1660/RTX 3060)**: 배치 크기 48, Mixed precision
+- **4GB 미만**: CPU 모드로 자동 전환
+
 ### 임베딩 모델
 - **기본값**: Mock 임베딩 (외부 의존성 없음)
 - **고급 옵션**: SentenceTransformer 모델 (`sentence-transformers` 설치 필요)
+- **GPU 가속**: CUDA 지원 시 자동으로 GPU에서 실행
 
 ### SPLADE 하이브리드 검색
 - **활성화**: `--use-splade` 옵션 사용
 - **기능**: Dense + Sparse 벡터를 결합한 고급 검색
 - **용도**: 특정 주제나 키워드로 대화 검색
+- **GPU 가속**: Half precision으로 GPU에서 고속 처리
 
 ### Ollama 연동 (한국어 모델 완전 지원)
 - **활성화**: `--use-ollama` 옵션 사용

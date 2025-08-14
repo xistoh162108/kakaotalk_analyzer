@@ -113,40 +113,100 @@ class MockSparseBackend(SparseBackend):
 class SPLADEBackend(SparseBackend):
     """Real SPLADE backend using transformers"""
     
-    def __init__(self, model_name: str = "naver/splade-cocondenser-ensembledistil"):
+    def __init__(self, model_name: str = "naver/splade-cocondenser-ensembledistil", device: str = None):
         self.model_name = model_name
         self._model = None
         self._tokenizer = None
-        self.device = "cpu"  # Use CPU for better memory management
+        
+        # Auto-detect device if not specified
+        if device is None:
+            try:
+                import torch
+                self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+            except ImportError:
+                self.device = 'cpu'
+        else:
+            self.device = device
     
     def _load_model(self):
-        """Lazy load SPLADE model"""
+        """Lazy load SPLADE model with GPU optimization"""
         if self._model is None:
             try:
                 from transformers import AutoModelForMaskedLM, AutoTokenizer
                 import torch
                 
-                self._tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-                self._model = AutoModelForMaskedLM.from_pretrained(self.model_name)
-                self._model.eval()
-                self._model.to(self.device)
+                logger = logging.getLogger(__name__)
+                logger.info(f"🔥 SPLADE 모델 로드:")
+                logger.info(f"   📦 모델: {self.model_name}")
+                logger.info(f"   🔧 디바이스: {self.device}")
                 
-                print(f"✅ Loaded SPLADE model: {self.model_name}")
+                # Load tokenizer
+                self._tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+                
+                # Load model with device-specific optimizations
+                if self.device == 'cuda':
+                    # Load with GPU optimizations
+                    self._model = AutoModelForMaskedLM.from_pretrained(
+                        self.model_name,
+                        torch_dtype=torch.float16,  # Use half precision for GPU
+                        device_map="auto"
+                    )
+                    logger.info(f"   💾 GPU 모드: Half precision (float16) 사용")
+                else:
+                    # Load for CPU
+                    self._model = AutoModelForMaskedLM.from_pretrained(self.model_name)
+                    self._model.to(self.device)
+                
+                self._model.eval()
+                
+                # Log memory usage for GPU
+                if self.device == 'cuda':
+                    try:
+                        memory_allocated = torch.cuda.memory_allocated() / (1024**3)
+                        logger.info(f"   💾 GPU 메모리 사용: {memory_allocated:.2f}GB")
+                    except:
+                        pass
+                
+                logger.info(f"✅ SPLADE 모델 로드 완료")
                 
             except ImportError as e:
                 raise ImportError(f"transformers library not available: {e}")
             except Exception as e:
                 raise RuntimeError(f"Failed to load SPLADE model: {e}")
     
-    def encode_sparse(self, texts: List[str], batch_size: int = 8) -> Tuple[List[Dict[str, float]], Dict[str, Any]]:
-        """Encode texts using SPLADE model"""
+    def encode_sparse(self, texts: List[str], batch_size: int = None) -> Tuple[List[Dict[str, float]], Dict[str, Any]]:
+        """Encode texts using SPLADE model with GPU optimization"""
         self._load_model()
         
         import torch
         
-        sparse_vectors = []
+        # Optimize batch size based on device
+        if batch_size is None:
+            if self.device == 'cuda':
+                # Get GPU memory and adjust batch size
+                try:
+                    from .utils import get_gpu_info
+                    gpu_info = get_gpu_info()
+                    memory_gb = gpu_info['memory_total'] / (1024**3)
+                    
+                    if memory_gb >= 12:  # High-end GPU
+                        batch_size = 16
+                    elif memory_gb >= 8:  # Mid-range GPU
+                        batch_size = 12
+                    elif memory_gb >= 4:  # Entry-level GPU
+                        batch_size = 8
+                    else:
+                        batch_size = 4
+                except:
+                    batch_size = 8  # Conservative default for GPU
+            else:
+                batch_size = 4  # Conservative for CPU
         
-        # Process in smaller batches for memory efficiency
+        sparse_vectors = []
+        logger = logging.getLogger(__name__)
+        logger.info(f"🔥 SPLADE 인코딩 시작: {len(texts):,}개 텍스트, 배치 크기: {batch_size}")
+        
+        # Process in batches for memory efficiency
         for i in range(0, len(texts), batch_size):
             batch_texts = texts[i:i + batch_size]
             
@@ -209,9 +269,10 @@ class SPLADEBackend(SparseBackend):
 class HybridRetriever:
     """Hybrid dense + sparse retrieval system"""
     
-    def __init__(self, config, logger: logging.Logger = None):
+    def __init__(self, config, logger: logging.Logger = None, device_info: Dict[str, Any] = None):
         self.config = config
         self.logger = logger or logging.getLogger(__name__)
+        self.device_info = device_info or {'device': 'cpu'}
         self.dense_weight = 0.7  # Default weighting
         self.sparse_weight = 0.3
         
@@ -221,10 +282,11 @@ class HybridRetriever:
             self.sparse_backend = None
     
     def _create_sparse_backend(self) -> SparseBackend:
-        """Create sparse backend"""
+        """Create sparse backend with GPU support"""
         try:
+            device = self.device_info.get('device', 'cpu')
             self.logger.info("Loading real SPLADE backend...")
-            return SPLADEBackend()
+            return SPLADEBackend(device=device)
         except (ImportError, RuntimeError) as e:
             self.logger.warning(f"Failed to load real SPLADE backend: {e}")
             self.logger.info("Falling back to mock sparse backend")
