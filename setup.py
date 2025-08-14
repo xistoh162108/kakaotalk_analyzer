@@ -26,13 +26,13 @@ setup(
     description="Comprehensive analysis tool for KakaoTalk chat exports",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/user/kakao-analyzer",
+    url="https://github.com/xistoh162108/kakaotalk_analyzer",
     license="MIT",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
-        "Intended Audience :: Developers",
-        "Intended Audience :: Researchers", 
+        "Intended Audience :: Science/Research",
+        "Intended Audience :: Developers", 
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
@@ -69,8 +69,8 @@ setup(
     },
     keywords="kakao kakaotalk chat analysis nlp korean messaging",
     project_urls={
-        "Bug Reports": "https://github.com/user/kakao-analyzer/issues",
-        "Documentation": "https://github.com/user/kakao-analyzer/blob/main/README.md",
-        "Source": "https://github.com/user/kakao-analyzer",
+        "Bug Reports": "https://github.com/xistoh162108/kakaotalk_analyzer/issues",
+        "Documentation": "https://github.com/xistoh162108/kakaotalk_analyzer/blob/main/README.md",
+        "Source": "https://github.com/xistoh162108/kakaotalk_analyzer",
     },
 )
