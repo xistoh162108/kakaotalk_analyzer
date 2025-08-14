@@ -10,7 +10,7 @@ class Config:
     """Configuration class for Kakao Analyzer"""
     
     # Model settings
-    ollama_model: str = "oss:20b"
+    ollama_model: str = "gpt-oss:20b"
     embed_model: str = "bge-m3"
     use_ollama: bool = False
     use_splade: bool = False

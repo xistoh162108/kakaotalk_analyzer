@@ -20,7 +20,7 @@ if requirements_path.exists():
 
 setup(
     name="kakao-analyzer",
-    version="1.0.0",
+    version="1.0.1",
     author="Claude Code User",
     author_email="user@example.com",
     description="Comprehensive analysis tool for KakaoTalk chat exports",

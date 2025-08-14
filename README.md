@@ -153,7 +153,7 @@ kakao-analyzer --input INPUT [옵션들]
 
 AI 모델 옵션:
   --use-ollama                 Ollama 임베딩 사용 (로컬)
-  --model-name MODEL           Ollama 모델명 (기본값: oss:20b)
+  --model-name MODEL           Ollama 모델명 (기본값: gpt-oss:20b)
   --embed-model MODEL          임베딩 모델명 (기본값: bge-m3)
   --use-splade                 SPLADE 희소 검색 활성화
 
@@ -179,7 +179,7 @@ AI 모델 옵션:
 kakao-analyzer --input chat.csv
 
 # 🤖 AI 기능 전체 활용
-kakao-analyzer --input chat.csv --use-splade --use-ollama --model-name "oss:20b"
+kakao-analyzer --input chat.csv --use-splade --use-ollama --model-name "gpt-oss:20b"
 
 # 📊 특정 디렉토리에 결과 저장
 kakao-analyzer --input chat.csv --outdir my_results
@@ -279,10 +279,34 @@ python test_runner.py --generate-data
 - **기능**: Dense + Sparse 벡터를 결합한 고급 검색
 - **용도**: 특정 주제나 키워드로 대화 검색
 
-### Ollama 연동
+### Ollama 연동 (한국어 모델 완전 지원)
 - **활성화**: `--use-ollama` 옵션 사용
 - **요구사항**: Ollama 서버 실행 중이어야 함
-- **모델**: oss:20b (기본값, 설정 파일에서 변경 가능)
+- **기본 모델**: gpt-oss:20b (추천)
+
+#### 🇰🇷 지원 한국어 모델들
+| 모델명 | 크기 | 특징 | 사용법 |
+|--------|------|------|--------|
+| `gpt-oss:20b` | 20B | 범용 한국어 모델 (기본값) | `--model-name "gpt-oss:20b"` |
+| `gpt-oss:40b` | 40B | 고성능 한국어 모델 | `--model-name "gpt-oss:40b"` |
+| `llama3-ko` | 8B | LLaMA3 한국어 파인튜닝 | `--model-name "llama3-ko"` |
+| `aya:8b` | 8B | 다국어 지원 (한국어 포함) | `--model-name "aya:8b"` |
+| `gemma2-ko` | 9B | Google Gemma2 한국어 버전 | `--model-name "gemma2-ko"` |
+| `solar-ko` | 10.7B | Upstage SOLAR 한국어 모델 | `--model-name "solar-ko"` |
+| `eeve-korean` | 10.8B | 한국 전용 대화 모델 | `--model-name "eeve-korean"` |
+| `beomi-ko` | 13B | 한국어 특화 고성능 모델 | `--model-name "beomi-ko"` |
+
+#### 🚀 모델 설치 및 사용법
+```bash
+# Ollama 설치 (한 번만)
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# 한국어 모델 다운로드 (예: gpt-oss:20b)
+ollama pull gpt-oss:20b
+
+# 분석 실행
+kakao-analyzer --input chat.csv --use-ollama --model-name "gpt-oss:20b"
+```
 
 ## 📊 분석 결과 해석
 

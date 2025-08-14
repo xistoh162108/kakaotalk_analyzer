@@ -646,10 +646,10 @@ class ReportGenerator:
         # Ollama model analysis
         advanced_topics = analysis_results.get('advanced_topics', {})
         if advanced_topics:
-            section += f"\n\n### Ollama 모델 분석 (oss:20b)"
+            section += f"\n\n### Ollama 모델 분석"
             
             model_info = advanced_topics.get('model_info', {})
-            section += f"\n- **모델**: {model_info.get('name', 'oss:20b')}"
+            section += f"\n- **모델**: {model_info.get('name', 'gpt-oss:20b')}"
             section += f"\n- **모델 크기**: {model_info.get('size', 'Unknown')}"
             section += f"\n- **분석된 세그먼트**: {advanced_topics.get('analyzed_segments', 0)}개"
             

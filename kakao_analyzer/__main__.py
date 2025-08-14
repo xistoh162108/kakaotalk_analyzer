@@ -20,7 +20,7 @@ def create_parser() -> argparse.ArgumentParser:
         epilog="""
 Examples:
   kakao-analyzer --input test.csv
-  kakao-analyzer --input test.csv --use-ollama --model-name "oss:20b"
+  kakao-analyzer --input test.csv --use-ollama --model-name "gpt-oss:20b"
   kakao-analyzer --input test.csv --use-splade --embed-model bge-m3
         """
     )
@@ -54,8 +54,8 @@ Examples:
     
     parser.add_argument(
         '--model-name',
-        default='oss:20b',
-        help='Ollama model name (default: oss:20b)'
+        default='gpt-oss:20b',
+        help='Ollama model name (default: gpt-oss:20b). 한국어 지원 모델: gpt-oss:20b, gpt-oss:40b, llama3-ko, aya:8b, gemma2-ko, solar-ko, eeve-korean, beomi-ko'
     )
     
     parser.add_argument(
