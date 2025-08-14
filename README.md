@@ -1,6 +1,15 @@
 # 🔥 카카오톡 대화 분석기 (Kakao Talk Analyzer)
 
+[![PyPI version](https://badge.fury.io/py/kakao-analyzer.svg)](https://badge.fury.io/py/kakao-analyzer)
+[![Python versions](https://img.shields.io/pypi/pyversions/kakao-analyzer.svg)](https://pypi.org/project/kakao-analyzer/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Downloads](https://pepy.tech/badge/kakao-analyzer)](https://pepy.tech/project/kakao-analyzer)
+
 > 카카오톡 대화 내보내기 CSV 파일을 종합적으로 분석하는 **차세대 AI 기반** 올인원 도구
+
+```bash
+pip install kakao-analyzer
+```
 
 **🎯 카카오톡의 특성을 완벽하게 이해하는 스마트 분석기**
 - 연속 메시지 자동 그룹핑 (1분 이내 메시지 통합)
@@ -55,31 +64,82 @@
 
 ## 🛠️ 설치 및 실행
 
-### 요구사항
-- Python 3.8+
-- 필요한 패키지들 (requirements.txt 참조)
+### 📦 PyPI를 통한 간편 설치 (권장)
 
-### 설치
 ```bash
-# 저장소 클론 또는 파일 다운로드
-cd 카톡_분석기
+# 기본 설치
+pip install kakao-analyzer
+
+# 전체 기능 설치 (AI 모델 포함)
+pip install kakao-analyzer[full]
+
+# 개발 도구 포함 설치
+pip install kakao-analyzer[dev]
+```
+
+설치 후 바로 사용 가능:
+```bash
+kakao-analyzer --input your_chat.csv
+```
+
+### 💻 개발자용 설치
+
+개발이나 커스터마이징을 원한다면:
+
+```bash
+# 저장소 클론
+git clone https://github.com/xistoh162108/kakaotalk_analyzer.git
+cd kakaotalk_analyzer
 
 # 의존성 설치
 pip install -r requirements.txt
+
+# 개발 모드로 설치
+pip install -e .
 ```
 
-### 기본 사용법
-```bash
-# 기본 분석 실행
-python -m kakao_analyzer input.csv output_directory
+### 📋 요구사항
+- **Python**: 3.8 이상
+- **운영체제**: Windows, macOS, Linux 모두 지원
+- **메모리**: 최소 4GB RAM (대용량 데이터는 8GB+ 권장)
 
-# 상세 옵션 확인
-python -m kakao_analyzer --help
+## 🚀 빠른 시작
+
+### 1단계: 설치
+```bash
+pip install kakao-analyzer
 ```
 
-### CLI 옵션
+### 2단계: 카카오톡 대화 내보내기
+1. 카카오톡 앱에서 분석하고 싶은 대화방 열기
+2. `☰` 메뉴 → `채팅방 설정` → `대화 내용 내보내기`
+3. `텍스트 파일(.txt)` 선택하여 내보내기
+4. 내보낸 파일을 CSV 형식으로 변환 (또는 직접 CSV로 준비)
+
+### 3단계: 분석 실행
 ```bash
-python -m kakao_analyzer --input INPUT [옵션들]
+# 기본 분석
+kakao-analyzer --input your_chat.csv
+
+# 고급 AI 분석 포함 (권장)
+kakao-analyzer --input your_chat.csv --use-splade --use-ollama
+```
+
+### ✨ 사용법
+```bash
+# 기본 분석 (가장 간단)
+kakao-analyzer --input chat.csv
+
+# 출력 디렉토리 지정
+kakao-analyzer --input chat.csv --outdir my_analysis
+
+# 도움말 보기
+kakao-analyzer --help
+```
+
+### 🛠️ 고급 옵션
+```bash
+kakao-analyzer --input INPUT [옵션들]
 
 필수 옵션:
   --input INPUT                입력 CSV 파일 경로
@@ -113,28 +173,28 @@ AI 모델 옵션:
   --skip-viz                   시각화 생성 건너뛰기
 ```
 
-### 예제
+### 💡 사용 예제
 ```bash
-# 기본 분석
-python -m kakao_analyzer --input chat.csv
+# 🌟 기본 분석 (추천)
+kakao-analyzer --input chat.csv
 
-# 로컬 AI 모델 사용 (권장)
-python -m kakao_analyzer --input chat.csv --use-ollama --embed-model bge-m3
+# 🤖 AI 기능 전체 활용
+kakao-analyzer --input chat.csv --use-splade --use-ollama --model-name oss:20b
 
-# 고급 분석 (SPLADE 하이브리드 검색 포함)
-python -m kakao_analyzer --input chat.csv --use-splade --use-ollama
+# 📊 특정 디렉토리에 결과 저장
+kakao-analyzer --input chat.csv --outdir my_results
 
-# 대규모 데이터 테스트 (500개 메시지 부분집합)
-python -m kakao_analyzer --input large_chat.csv --subset-size 500 --subset-strategy balanced
+# ⚡ 대용량 데이터 빠른 테스트
+kakao-analyzer --input big_chat.csv --subset-size 1000 --subset-strategy balanced
 
-# 카카오톡 그룹핑 비활성화 (원본 메시지 그대로 분석)
-python -m kakao_analyzer --input chat.csv --disable-message-grouping
+# 🔧 세밀한 설정 조정
+kakao-analyzer --input chat.csv --topic-window-size 20 --similarity-threshold 0.4
 
-# 그룹핑 시간 창 조정 (30초로 변경)
-python -m kakao_analyzer --input chat.csv --group-window-seconds 30
+# 🎨 고해상도 그래프 생성
+kakao-analyzer --input chat.csv --figure-dpi 600
 
-# 조용한 실행 (로그 최소화)
-python -m kakao_analyzer --input chat.csv --quiet --skip-viz
+# 🔇 조용한 실행 (CI/CD용)
+kakao-analyzer --input chat.csv --quiet --skip-viz --log-level ERROR
 ```
 
 ## 📁 출력 구조
@@ -312,10 +372,10 @@ pip install -r requirements.txt
 ### 로그 확인
 ```bash
 # 상세 로그로 실행
-python -m kakao_analyzer input.csv output --verbose
+kakao-analyzer --input chat.csv --log-level DEBUG
 
-# 로그 파일 확인
-cat output/logs/analyzer.log
+# 로그 파일 확인 (기본 출력 디렉토리)
+cat chat_analysis/logs/run.log
 ```
 
 ## 📈 성능 최적화
