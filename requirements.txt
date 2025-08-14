@@ -1,0 +1,25 @@
+# Core data processing
+pandas>=1.5.0
+numpy>=1.21.0
+
+# Visualization
+matplotlib>=3.5.0
+seaborn>=0.11.0
+wordcloud>=1.8.0
+
+# Machine learning and embeddings
+scikit-learn>=1.1.0
+sentence-transformers>=2.2.0
+
+# Deep learning (for SPLADE)
+torch>=1.13.0
+transformers>=4.21.0
+
+# Utilities  
+chardet>=4.0.0
+tqdm>=4.60.0
+requests>=2.25.0
+
+# Optional: For Korean language processing
+# konlpy>=0.6.0
+# mecab-python3>=1.0.0
